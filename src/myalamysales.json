@@ -1,0 +1,861 @@
+{
+  "name": "Alamy fetch sales by jbd7",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "47dd1d1e-f1ea-4d84-b04c-4bc63e1965d4",
+      "name": "When clicking \"Execute Workflow\"",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{\"https://www.alamy.com/alamycontributorreports/Reports.aspx?Rep=0&sdate=\" + $json[\"yesterdaydate\"] + \"&edate=\" + $json[\"todaydate\"] + \"&r2checked=False&drpval=2000&netType=1\"}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "cookie",
+              "value": "<ALAMYCOOKIE>"
+            },
+            {
+              "name": "upgrade-insecure-requests",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "id": "aae746c0-a203-440d-a162-906a44023e31",
+      "name": "HTTP Request - Alamy homepage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        220,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "640715f0-b678-4524-aea3-061ddb77c52f",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "extractionValues": {
+          "values": [
+            {
+              "key": "image_text",
+              "cssSelector": ".bg9",
+              "returnArray": true
+            },
+            {
+              "key": "image_html",
+              "cssSelector": ".bg9",
+              "returnValue": "html",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true
+        }
+      },
+      "id": "8995cad3-ee68-4c41-91bd-b0e6cf036dbe",
+      "name": "HTML Extract",
+      "type": "n8n-nodes-base.htmlExtract",
+      "typeVersion": 1,
+      "position": [
+        380,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "todaydate",
+              "value": "={{\n$json[\"manual\"] ? '03-Feb-2023' : $now.toFormat('dd-MMM-yyyy')\n}} "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "127a7917-6607-469b-89e6-a30693441247",
+      "name": "SetTodaysDate",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "manual",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bbc9e5b3-5d6c-428b-bfdc-218496672798",
+      "name": "SetManualRun",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "image_html",
+        "options": {}
+      },
+      "id": "3300d1d4-c7a2-47b2-a158-2d3f78441284",
+      "name": "Split images_html",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "7dbc3eb1-1fd7-49c5-ab39-43bb651f72fe",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "<TELEGRAMCHATID>",
+        "text": "={{ \"<b>😍 New Alamy Sale! \" +  $json[\"image_price\"] + \"USD</b>\\n\\n\" + $json[\"image_text\"].replace(\"$\\n\",\"$\") }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "9df69ca3-ec51-4838-89aa-d7b7e0b4531f",
+      "name": "TelegramMessage",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        800
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "<TELEGRAMCREDENTIALS>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "<TELEGRAMCHATID>",
+        "file": "={{ $node[\"OneAtATime\"].json[\"image_link\"] }}",
+        "additionalFields": {}
+      },
+      "id": "ce3ebcd2-bc83-45ad-b7a5-8043cc662d5e",
+      "name": "TelegramImage",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        800
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "<TELEGRAMCREDENTIALS>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "image_link",
+              "value": "={{ $json[\"image_html\"].match(/(https?:\\/\\/[^\\s]+thumbs[^\\s]+)/)[0] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8e28aca6-7beb-484b-a6d2-1dd4e3578681",
+      "name": "ExtractImageLink",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d33a5922-cd0e-4169-8b0d-336509bf87f7",
+      "name": "OneAtATime",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        160,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json[\"image_text\"] }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "id": "762c9da8-f071-4033-8426-49050205e575",
+      "name": "IfEmpty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        560,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "action": "calculate",
+        "value": "={{ $json[\"todaydate\"] }}",
+        "operation": "subtract",
+        "duration": 1,
+        "dataPropertyName": "yesterdaydate",
+        "options": {
+          "fromFormat": ""
+        }
+      },
+      "id": "000a7b52-2f7f-4534-8075-66b24bcd3bd2",
+      "name": "SetYesterdaysDate",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "image_id",
+              "value": "={{ $json[\"image_html\"].match(/\\/([^\\/]+).jpg/)[1] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9c885be8-d553-4ba1-b06c-475b6c0582ae",
+      "name": "ExtractImageID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "image_date",
+              "value": "={{ $json[\"image_html\"].match(/<td>([0-9]+\\s[^\\/]+\\s[0-9]+)<\\/td>/)[1] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cb6fff1e-67db-4e11-a242-408cb99a2cce",
+      "name": "ExtractImageDate",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        1160
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "image_price",
+              "value": "={{ $json[\"image_html\"].match(/<td.*>\\s+\\$\\s+(\\d+(?:\\.\\d{2})?)<\\/td>/)[1] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "71262994-5a78-41cc-bb97-53e28c8c63a9",
+      "name": "ExtractImagePrice",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        1300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "167ec2b4-7adc-4184-a718-780dbb5733f2",
+      "name": "MergeLinkAndID",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "87f6f2c6-fdfa-42b4-abca-171320fa32c0",
+      "name": "MergeDateAndPrice",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        1220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "9c577050-8d0a-4d9e-997d-6e590437d184",
+      "name": "Merge4Attributes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        1100
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "image_text",
+        "options": {}
+      },
+      "id": "6dfb6c2e-4fcf-4da6-9486-9bcdb25571b9",
+      "name": "Split image_text",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "application": {
+          "__rl": true,
+          "value": "<AIRTABLELINK>",
+          "mode": "url",
+          "__regex": "https://airtable.com/([a-zA-Z0-9]{2,})"
+        },
+        "table": {
+          "__rl": true,
+          "value": "<AIRTABLELINK>",
+          "mode": "url",
+          "__regex": "https://airtable.com/[a-zA-Z0-9]{2,}/([a-zA-Z0-9]{2,})"
+        },
+        "additionalOptions": {
+          "fields": [],
+          "filterByFormula": "=AND(image_id = \"{{$json[\"image_id\"]}}\", image_price=\"{{$json[\"image_price\"]}}\", image_date=\"{{$json[\"image_date\"]}}\")"
+        }
+      },
+      "id": "48e422d9-a1da-4e55-809b-045ff80e572a",
+      "name": "AirtableList",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 1,
+      "position": [
+        360,
+        640
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableApi": {
+          "id": "8",
+          "name": "<AIRTABLECREDENTIALS>"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "application": {
+          "__rl": true,
+          "value": "<AIRTABLELINK>",
+          "mode": "url",
+          "__regex": "https://airtable.com/([a-zA-Z0-9]{2,})"
+        },
+        "table": {
+          "__rl": true,
+          "value": "<AIRTABLELINK>",
+          "mode": "url",
+          "__regex": "https://airtable.com/[a-zA-Z0-9]{2,}/([a-zA-Z0-9]{2,})"
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "c057f32f-57d4-45cc-a93e-ff648bb35de5",
+      "name": "AirtableAppend",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        620
+      ],
+      "credentials": {
+        "airtableApi": {
+          "id": "8",
+          "name": "<AIRTABLECREDENTIALS>"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "id": "d93fadd6-a8a8-4700-b6f6-8a7baa4cdfa5",
+      "name": "IFempty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        560,
+        780
+      ],
+      "retryOnFail": false,
+      "alwaysOutputData": false,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "image_text",
+              "value": "={{ $node[\"OneAtATime\"].json[\"image_text\"] }}"
+            },
+            {
+              "name": "image_link",
+              "value": "={{ $node[\"OneAtATime\"].json[\"image_link\"] }}"
+            },
+            {
+              "name": "image_id",
+              "value": "={{ $node[\"OneAtATime\"].json[\"image_id\"] }}"
+            },
+            {
+              "name": "image_date",
+              "value": "={{ $node[\"OneAtATime\"].json[\"image_date\"] }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "image_price",
+              "value": "={{ $node[\"OneAtATime\"].json[\"image_price\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9be54ec9-5913-4ceb-951d-be71bd121d20",
+      "name": "SetNewImages",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        780,
+        700
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request - Alamy homepage": {
+      "main": [
+        [
+          {
+            "node": "HTML Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML Extract": {
+      "main": [
+        [
+          {
+            "node": "IfEmpty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SetTodaysDate": {
+      "main": [
+        [
+          {
+            "node": "SetYesterdaysDate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "SetTodaysDate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking \"Execute Workflow\"": {
+      "main": [
+        [
+          {
+            "node": "SetManualRun",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SetManualRun": {
+      "main": [
+        [
+          {
+            "node": "SetTodaysDate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split images_html": {
+      "main": [
+        [
+          {
+            "node": "ExtractImageLink",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ExtractImageID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ExtractImageDate",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "ExtractImagePrice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "OneAtATime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TelegramMessage": {
+      "main": [
+        [
+          {
+            "node": "TelegramImage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractImageLink": {
+      "main": [
+        [
+          {
+            "node": "MergeLinkAndID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OneAtATime": {
+      "main": [
+        [
+          {
+            "node": "AirtableList",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TelegramImage": {
+      "main": [
+        [
+          {
+            "node": "OneAtATime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IfEmpty": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Split image_text",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split images_html",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SetYesterdaysDate": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Alamy homepage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractImageID": {
+      "main": [
+        [
+          {
+            "node": "MergeLinkAndID",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "ExtractImageDate": {
+      "main": [
+        [
+          {
+            "node": "MergeDateAndPrice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractImagePrice": {
+      "main": [
+        [
+          {
+            "node": "MergeDateAndPrice",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MergeLinkAndID": {
+      "main": [
+        [
+          {
+            "node": "Merge4Attributes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MergeDateAndPrice": {
+      "main": [
+        [
+          {
+            "node": "Merge4Attributes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge4Attributes": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Split image_text": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AirtableList": {
+      "main": [
+        [
+          {
+            "node": "IFempty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IFempty": {
+      "main": [
+        [
+          {
+            "node": "SetNewImages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OneAtATime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SetNewImages": {
+      "main": [
+        [
+          {
+            "node": "AirtableAppend",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "TelegramMessage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveExecutionProgress": "DEFAULT",
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 60,
+    "errorWorkflow": "11"
+  },
+  "versionId": "7ee5d2c5-3a54-435e-a739-34c50f7a3fbf",
+  "id": "10",
+  "meta": {
+    "instanceId": "abcdef1234567890"
+  },
+  "tags": []
+}
